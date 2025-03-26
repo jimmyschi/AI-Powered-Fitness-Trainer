@@ -25,7 +25,7 @@ I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inferenc
 ![Base TinyLlama 1.1B memory usage and inference time] ()
 
 ### Quantized TinyLlama 1.1B memory usage and inference time
-(![3F17062C-5F1D-49A7-9A84-4F9955664026_4_5005_c](https://github.com/user-attachments/assets/853b04be-842c-443f-8c3c-8bdbd1282e29))
+![3F17062C-5F1D-49A7-9A84-4F9955664026_4_5005_c](https://github.com/user-attachments/assets/853b04be-842c-443f-8c3c-8bdbd1282e29))
 
 ### 3. MediaPipe
 Google's MediaPipe is a pose detection algorithm that extracts joint positions from images. I utilized this pose detection algorithm in combination with OpenCV's VideoCapture class to extract each frame from the video and append each joint position to a joint_positions list which would then be used to help calculate force_vectors, joint_angles, and range of motion for a particular exercise. 
