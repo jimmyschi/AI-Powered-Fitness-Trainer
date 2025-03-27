@@ -248,7 +248,6 @@ class DeepseekChatbot(models.Model):
         """
         try:
             model_name="deepseek-ai/deepseek-llm-7b-chat"
-            # model_name = os.path.join(settings.BASE_DIR, "deepseek_fitness_chatbot")
             model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 device_map='auto',
@@ -477,7 +476,7 @@ class LlamaChatbot(models.Model):
         
         return tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    def generate_cached_response(self, prompt_text: str):
+    def generate_cached_response(self, prompt_text: str, exercise_type: str):
         """Generate response with caching for repeated prompts"""
         start_time = time.time()
         if self.pk is None: #Ensure model is saved
@@ -486,22 +485,25 @@ class LlamaChatbot(models.Model):
         cached_response = cache.get(cache_key)
         if cached_response:
             return cached_response
-        messages = [{"role": "user", "content": """
-                Provide detailed feedback on form improvement for this bench press, based on these angle ranges: 
-                Elbow Angle: 135.28; Opposite Elbow Angle: 56.13; Shoulder Angle: 91.77; Opposite Shoulder Angle: 112.97. 
+        messages = [{"role": "user", "content": f"""
+                Provide detailed feedback on form improvement for this {exercise_type}, based on these angle ranges: 
+                {prompt_text}
 
                 Specifically address:
 
-                1.  Whether these angles are within a reasonable range for a proper bench press.
+                1.  Whether these angles are within a reasonable range for a proper {exercise_type}.
                 2.  Potential issues with the form based on these angles.
                 3.  Recommendations for improvement, referencing biomechanical principles and exercise science.
                 """}]
+        # print(f"messages['content']: {messages['content']}")
         input_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
         inputs = self.tokenizer(
             input_text,
             return_tensors="pt",
             padding=True
         ).to(self.device)
+        
+        self._measure_resources("Before Inference")
         
         with torch.inference_mode():
             output = self.model.generate(
@@ -514,10 +516,11 @@ class LlamaChatbot(models.Model):
                 top_p= 0.9,
                 pad_token_id=self.tokenizer.eos_token_id,
             )
+        self._measure_resources("After Inference")
         response = self.tokenizer.decode(output[0], skip_special_tokens=True)
         response = response.split("<|im_end|>")[-1].strip()
         end_time = time.time() - start_time
-        print(f"end_time: {end_time}")
+        print(f"Inference Time: {end_time}")
         cache.set(cache_key, response, timeout=3600)
         return response
     
@@ -555,7 +558,7 @@ class LlamaChatbot(models.Model):
             test_response = self.tokenizer.decode(output[0], skip_special_tokens=True)
             test_response = test_response.split("<|im_end|>")[-1].strip() #Remove <|im_end|> and anything before it
             end_time = time.time() - start_time
-            print(f"Test response: {test_response}")
+            # print(f"Test response: {test_response}")
             print(f"Inference Time: {end_time}")
             return test_response
         except Exception as e:
@@ -577,12 +580,13 @@ class LlamaChatbot(models.Model):
         Returns:
             _type_: _description_
         """
+        print("LlamaChatbot Video Feedback")
         assessment_system = ExerciseAssessmentSystem()
         tiny_llama = TinyLlama()
         keypoints = tiny_llama.format_keypoints(joint_positions=joint_positions, exercise_name=exercise_type,assessment_system=assessment_system)
         print(f"keypoints: {keypoints}")
         joint_angles = []
-        for frame in joint_angles:
+        for frame in keypoints:
             angles = assessment_system.calculate_joint_angles(keypoints=frame, exercise_type=exercise_type)
             if angles:
                 print(f"angles: {angles}")
@@ -591,267 +595,16 @@ class LlamaChatbot(models.Model):
         
         rom = assessment_system.calculate_range_of_motion(joint_angles)
 
-        prompt_text = self.create_llama_prompt(
-            exercise_type, rom
-        )
-        print(f"prompt_text: {prompt_text}")
-        
-        # return self.generate_cached_response(prompt_text)
-        return self.generate_test_response()
-    
-    def create_llama_prompt(self, exercise_type, rom):
-        general_context = f"Listed below is a workout video data for a particular exercise with its corresponding range of motion calculated in degrees as the maximum minus the minimum joint angle recorded across the entire video. Please provide feedback based on if correct form was used and provide specific explanations to determine if proper technique was used based on biomechanics and exercise science.\n\n"
-
-        rom_str = "; ".join(f"{k.replace('_', ' ').title()}: {v:.2f}" for k, v in rom.items())
-        
-        prompt_text = (f"<|im_start|>user\nContext: {general_context}\n"
-                       f"Exercise: {exercise_type}\n"
-                       f"Range of Motion: {rom_str}"
-                       f"<|im_end|>\n")
-        return prompt_text
-    
-    def _measure_resources(self, stage: str):
-        print(f"--- Resource Usage ({stage}) ---")
-        print(f"CPU Usage: {psutil.cpu_percent()}%")
-        mem = psutil.virtual_memory()
-        print(f"RAM Usage: {mem.used / (1024 ** 2):.2f} MB / {mem.total / (1024 ** 2):.2f} MB")
-
-        if self.device.type == "cuda":
-            print(f"GPU Memory Allocated: {torch.cuda.memory_allocated() / (1024 ** 2):.2f} MB")
-            print(f"GPU Memory Reserved: {torch.cuda.memory_reserved() / (1024 ** 2):.2f} MB")
-        elif self.device.type == "mps":
-            if hasattr(torch.mps, 'memory_allocated'):
-                print(f"MPS Memory Allocated: {torch.mps.memory_allocated() / (1024 ** 2):.2f} MB")
-            if hasattr(torch.mps, 'memory_reserved'):
-                print(f"MPS Memory Reserved: {torch.mps.memory_reserved() / (1024 ** 2):.2f} MB")
-        print("---")
-        
-class QuantizedLlamaChatbot(models.Model):
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self.logger = logging.getLogger(__name__)
-        self.logger.info("Initializing Quantized TinyLlama (ONNX)")
-
-        self.offload_path = os.path.join(settings.BASE_DIR, "llama_model_offload_onnx")
-
-        if torch.backends.mps.is_available():
-            self.device = torch.device("mps")
-            self.logger.info(f"Using MPS (Metal) backend for M1 Mac")
-        elif torch.cuda.is_available():
-            self.device = torch.device("cuda")
-            self.logger.info(f"Using CUDA (GPU)")
-        else:
-            self.device = torch.device("cpu")
-            self.logger.info(f"Using CPU")
-
-        self.logger.info("Loading quantized ONNX model...")
-        self.model, self.tokenizer = self._load_quantized_onnx_model()
-
-        self.setup_inference_optimizations()
-
-    def _load_quantized_onnx_model(self):
-        try:
-            print("LOADING ONNX MODEL")
-            original_model_name = os.path.join(settings.BASE_DIR.parent, "TinyLlama_fitness_chatbot")
-            model_name = os.path.join(settings.BASE_DIR.parent, "TinyLlama_fitness_chatbot_onnx") #Change to your ONNX model Directory
-            tokenizer = AutoTokenizer.from_pretrained(original_model_name)
-            tokenizer.pad_token = tokenizer.eos_token
-            tokenizer.padding_side = "left"
-            tokenizer.chat_template = "{% for message in messages %}<|im_start|>{{ message.role }}\n{{ message.content }}<|im_end|>\n{% endfor %}"
-
-            onnx_model_path = os.path.join(model_name, "model_quantized.onnx") #Change to your onnx file name.
-            providers = ['CPUExecutionProvider'] # or ['CUDAExecutionProvider', 'CPUExecutionProvider'] if you are using cuda.
-            if self.device.type == "cuda":
-                providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-            elif self.device.type == "mps":
-                providers = ['CoreMLExecutionProvider', 'CPUExecutionProvider'] # If you have coreml onnx runtime.
-            print(f"providers: {providers}")
-            
-            session_options = ort.SessionOptions()
-            session_options.intra_op_num_threads = os.cpu_count()
-            session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-            
-            ort_session = ort.InferenceSession(onnx_model_path, providers=providers, sess_options=session_options)
-            input_names = [input.name for input in ort_session.get_inputs()]
-            print(f"input_names: {input_names}")
-
-            def onnx_generate(input_ids, attention_mask, max_new_tokens=200, num_beams=1, do_sample=True, temperature=0.7, top_p=0.9, pad_token_id=tokenizer.eos_token_id):
-                print(f"Input IDs: {input_ids}")
-                gather_2_data = np.array([0, 1, 2], dtype=np.int64)
-                ort_inputs = {
-                    'input_ids': input_ids.cpu().numpy(),
-                    'attention_mask': attention_mask.cpu().numpy(),
-                    'onnx::Gather_2': gather_2_data
-                }
-                # print(f"Input IDs shape: {ort_inputs['input_ids'].shape}") #Debugging
-                # print(f"Attention Mask shape: {ort_inputs['attention_mask'].shape}") #Debugging
-                ort_outputs = ort_session.run(None, ort_inputs)
-                print(f"ORT outputs shape: {ort_outputs[0].shape}")
-                print(f"ORT outputs: {ort_outputs[0]}") #Be careful, outputs can be very large.
-                logits = torch.from_numpy(ort_outputs[0])
-                if logits.shape != (input_ids.shape[0], logits.shape[2]):
-                    logits = logits.squeeze(1)
-                next_token_logits = logits[:, -1, :]
-                probs = torch.softmax(next_token_logits / temperature, dim=-1)
-                next_token = torch.multinomial(probs, num_samples=1)
-                
-                # Move next_token to the same device as input_ids
-                next_token = next_token.to(input_ids.device)
-                print(f"Next token: {next_token}")
-                return torch.cat([input_ids, next_token], dim=-1)
-
-            def onnx_model_wrapper(input_ids, attention_mask, max_new_tokens=2, num_beams=1, do_sample=True, temperature=0.7, top_p=0.9, pad_token_id=tokenizer.eos_token_id):
-                output = onnx_generate(input_ids, attention_mask, max_new_tokens, num_beams, do_sample, temperature, top_p, pad_token_id)
-                print(f"Initial Output shape: {output.shape}")
-                return output
-
-            return onnx_model_wrapper, tokenizer
-
-        except Exception as e:
-            self.logger.warning(f"Failed to load quantized ONNX model: {e}")
-            raise
-
-    def setup_inference_optimizations(self):
-        # Inference mode is inherent in ONNX Runtime
-        torch.inference_mode(True)
-
-        # Set optimal thread settings for CPU
-        if self.device.type == "cpu":
-            torch.set_num_threads(os.cpu_count())
-            torch.set_num_interop_threads(1)
-
-    def generate_cached_response(self, prompt_text: str):
-        """Generate response with caching for repeated prompts"""
-        start_time = time.time()
-        if self.pk is None: #Ensure model is saved
-            self.save()
-        cache_key = f"chatbot_response_{self.pk}_{hash(prompt_text)}"
-        cached_response = cache.get(cache_key)
-        if cached_response:
-            return cached_response
-        messages = [{"role": "user", "content": """
-                Provide detailed feedback on form improvement for this bench press, based on these angle ranges: 
-                Elbow Angle: 135.28; Opposite Elbow Angle: 56.13; Shoulder Angle: 91.77; Opposite Shoulder Angle: 112.97. 
-
-                Specifically address:
-
-                1.  Whether these angles are within a reasonable range for a proper bench press.
-                2.  Potential issues with the form based on these angles.
-                3.  Recommendations for improvement, referencing biomechanical principles and exercise science.
-                """}]
-        input_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-        inputs = self.tokenizer(
-            input_text,
-            return_tensors="pt",
-            padding=True
-        ).to(self.device)
-
-        with torch.inference_mode():
-            output = self.model(
-                input_ids=inputs["input_ids"],
-                attention_mask=inputs["attention_mask"],
-                max_new_tokens=200,
-                num_beams=1,
-                do_sample=True,
-                temperature= 0.7,
-                top_p= 0.9,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
-
-        response = self.tokenizer.decode(output[0], skip_special_tokens=True)
-        response = response.split("<|im_end|>")[-1].strip()
-        end_time = time.time() - start_time
-        print(f"end_time: {end_time}")
-        cache.set(cache_key, response, timeout=3600)
-        return response
-
-    def generate_test_response(self):
-        try:
-            start_time = time.time()
-            messages = [{"role": "user", "content": """
-                            Provide detailed feedback on form improvement for this bench press, based on these angle ranges: 
-                            Elbow Angle: 135.28; Opposite Elbow Angle: 56.13; Shoulder Angle: 91.77; Opposite Shoulder Angle: 112.97. 
-
-                            Specifically address:
-
-                            1.  Whether these angles are within a reasonable range for a proper bench press.
-                            2.  Potential issues with the form based on these angles.
-                            3.  Recommendations for improvement, referencing biomechanical principles and exercise science.
-                            """}]
-            input_text = self.tokenizer.apply_chat_template(messages, tokenize=False)
-
-            inputs = self.tokenizer(input_text, return_tensors="pt", padding=True).to(self.device) #Tokenize in the same way as SFTTrainer
-
-            self._measure_resources("Before Inference")
-
-            with torch.inference_mode():
-                output = self.model(
-                    input_ids=inputs["input_ids"],
-                    attention_mask=inputs["attention_mask"],
-                    max_new_tokens=200,  # Or a reasonable value
-                    num_beams=1,
-                    do_sample=True,
-                    temperature= 0.7,
-                    top_p = 0.9,
-                )
-            self._measure_resources("After Inference")
-            test_response = self.tokenizer.decode(output[0], skip_special_tokens=True)
-            test_response = test_response.split("<|im_end|>")[-1].strip() #Remove <|im_end|> and anything before it
-            end_time = time.time() - start_time
-            print(f"Test response: {test_response}")
-            print(f"Inference Time: {end_time}")
-            return test_response
-        except Exception as e:
-            print(f"An error occurred in generate_test_response: {e}")  # Print the exception!
-            traceback.print_exc() #Print the full traceback
-            return None  # Or handle the error as appropriate
-    
-    def video_feedback(self, exercise_type: str, joint_positions: List[Dict], 
-                      timestamps: List[float], max_joint: str, num_frames: int = 5):
-        """_summary_
-
-        Args:
-            exercise_type (str): _description_
-            joint_positions (List[Dict]): _description_
-            timestamps (List[float]): _description_
-            max_joint (str): _description_
-            num_frames (int, optional): _description_. Defaults to 5.
-
-        Returns:
-            _type_: _description_
-        """
-        assessment_system = ExerciseAssessmentSystem()
-        tiny_llama = TinyLlama()
-        keypoints = tiny_llama.format_keypoints(joint_positions=joint_positions, exercise_name=exercise_type,assessment_system=assessment_system)
-        print(f"keypoints: {keypoints}")
-        joint_angles = []
-        for frame in joint_angles:
-            angles = assessment_system.calculate_joint_angles(keypoints=frame, exercise_type=exercise_type)
-            if angles:
-                print(f"angles: {angles}")
-                joint_angles.append(angles)
-        print(f"joint_angles: {joint_angles}")
-        
-        rom = assessment_system.calculate_range_of_motion(joint_angles)
-
-        prompt_text = self.create_llama_prompt(
-            exercise_type, rom
-        )
+        prompt_text = self.create_llama_prompt(rom)
         print(f"prompt_text: {prompt_text}")
         
         # return self.generate_test_response()
-        return self.generate_cached_response(prompt_text)
+        return self.generate_cached_response(prompt_text, exercise_type)
     
-    def create_llama_prompt(self, exercise_type, rom):
-        general_context = f"Listed below is a workout video data for a particular exercise with its corresponding range of motion calculated in degrees as the maximum minus the minimum joint angle recorded across the entire video. Please provide feedback based on if correct form was used and provide specific explanations to determine if proper technique was used based on biomechanics and exercise science.\n\n"
-
+    def create_llama_prompt(self, rom):
         rom_str = "; ".join(f"{k.replace('_', ' ').title()}: {v:.2f}" for k, v in rom.items())
-        
-        prompt_text = (f"<|im_start|>user\nContext: {general_context}\n"
-                       f"Exercise: {exercise_type}\n"
-                       f"Range of Motion: {rom_str}"
-                       f"<|im_end|>\n")
-        return prompt_text
+        print(f"rom_string: {rom_str}")
+        return rom_str
     
     def _measure_resources(self, stage: str):
         print(f"--- Resource Usage ({stage}) ---")
@@ -990,13 +743,15 @@ class BlokeLlamaChatbot(models.Model):
             
             output = self.model(
                 prompt=prompt,
-                max_tokens=10000,
+                max_tokens=500,
                 temperature=random.uniform(0.7,1.0),
                 top_p=0.9,
                 top_k=random.randint(40,60),
                 repeat_penalty=random.uniform(1.1,1.3),
                 # stop=["###", "\n\n"],
             )
+            
+            self._measure_resources("After Inference")
             generated_text = output['choices'][0]['text']
             # Find the starting index after "<|im_start|>assistant"
             start_index = generated_text.find("<|im_start|>assistant") + len("<|im_start|>assistant")
@@ -1007,7 +762,7 @@ class BlokeLlamaChatbot(models.Model):
             test_response = re.sub(r'\s+', ' ', test_response)
             
             end_time = time.time() - start_time
-            self._measure_resources("After Inference")
+            
             print(f"Inference Time: {end_time}")
             print(f"Test response: {test_response}")
             return test_response
@@ -1030,13 +785,13 @@ class BlokeLlamaChatbot(models.Model):
         Returns:
             _type_: _description_
         """
-        print("VIDEO FEEDBACK IN QUANTIZEDLLAMACHATBOT")
+        print("VIDEO FEEDBACK IN BLOKELLAMACHATBOT")
         assessment_system = ExerciseAssessmentSystem()
         tiny_llama = TinyLlama()
         keypoints = tiny_llama.format_keypoints(joint_positions=joint_positions, exercise_name=exercise_type,assessment_system=assessment_system)
         print(f"keypoints: {keypoints}")
         joint_angles = []
-        for frame in joint_angles:
+        for frame in keypoints:
             angles = assessment_system.calculate_joint_angles(keypoints=frame, exercise_type=exercise_type)
             if angles:
                 print(f"angles: {angles}")
@@ -1052,19 +807,31 @@ class BlokeLlamaChatbot(models.Model):
         )
         print(f"prompt_text: {prompt_text}")
         
-        return self.generate_cached_response(prompt_text)
-        # return self.generate_test_response()
+        # return self.generate_cached_response(prompt_text)
+        return self.generate_test_response()
     
     def create_llama_prompt(self, exercise_type, rom):
-        general_context = f"Listed below is a workout video data for a particular exercise with its corresponding range of motion calculated in degrees as the maximum minus the minimum joint angle recorded across the entire video. Please provide feedback based on if correct form was used and provide specific explanations to determine if proper technique was used based on biomechanics and exercise science.\n\n"
+        
 
         rom_str = "; ".join(f"{k.replace('_', ' ').title()}: {v:.2f}" for k, v in rom.items())
-        
-        prompt_text = (f"<|im_start|>user\nContext: {general_context}\n"
-                        f"Exercise: {exercise_type}\n"
-                        f"Range of Motion: {rom_str}"
-                        f"<|im_end|>\n")
-        return prompt_text
+        print(f"rom_str: {rom_str}")
+        prompt = f"""<|im_start|>user
+            Biomechanical Analysis of {exercise_type} Form
+
+            Given the following precise joint angle measurements:
+            {rom_str}
+
+            Provide a comprehensive, unique technical assessment focusing on:
+            1. Detailed analysis of each angle's implications for {exercise_type} technique
+            2. Specific biomechanical recommendations for form improvement
+            3. Potential compensation patterns or injury risks
+            4. Precise adjustments to optimize movement efficiency
+
+            Your response should be original, technical, and provide actionable insights.<|im_end|>
+            <|im_start|>assistant
+            """
+
+        return prompt
 
     def _measure_resources(self, stage: str):
         print(f"--- Resource Usage ({stage}) ---")
