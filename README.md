@@ -33,9 +33,10 @@ I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inferenc
 Google's MediaPipe is a pose detection algorithm that extracts joint positions from images. I utilized this pose detection algorithm in combination with OpenCV's VideoCapture class to extract each frame from the video and append each joint position to a joint_positions list which would then be used to help calculate force_vectors, joint_angles, and range of motion for a particular exercise. 
 
 ### 4. Docker
-I created Docker containers for mediapipe (pose detection model), llama (LLM chatbot feedback), react-app (frontend), db (PostgreSQL database), and django (backend).
+My docker-compose.yml file defines and manages a multi-container Docker application composed of five services: a React frontend, a Django backend, a Llama model service, a MediaPipe service, and a PostgreSQL database. These services are interconnected through a shared network and utilize volumes for data persistence.
 
 ### Kubernetes (GKE)
+Utilized Google Cloud Repository (GCR) to store my Docker files. My model-deployment.yml file specifies the number of replicas, container image, resource requests, and update strategy. I also utilized Google Cloud Load Balancer to expose my service externally via a pulbic IP address. 
 
 ### 6. Django Backend (Code found in /fitness_backend)
 
