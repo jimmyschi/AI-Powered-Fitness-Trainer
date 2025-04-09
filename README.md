@@ -1,13 +1,14 @@
 # AI Fitness Trainer
-Utilized Google's MediaPipe pose detection model to extract joint positions from exercise videos uploaded via React Frontend. Implemented real-time chatbot feedback with quantized TinyLlama 1.1B LLM model from Hugging Face Transformers. Other features include Django user authentification, asynchronous pose detection display and chatbot feedback using asyncio library, peak detection algorithm from scipy for counting reps from pose landmarks, and matplotlib plots for displaying reps with concentric/eccentric time spent for each rep for measuring time under tension. Please note that not 
+Utilized Google's MediaPipe pose detection model to extract joint positions from exercise videos uploaded via React Frontend. Implemented real-time chatbot feedback with quantized TinyLlama 1.1B LLM model from Hugging Face Transformers. Other features include Django user authentification, peak detection algorithm from scipy for counting reps from pose landmarks, and matplotlib plots for displaying reps with concentric/eccentric time spent for each rep for measuring time under tension. Additionally, I made this a scalable and resilient web application on GCP by utilizing Docker for containerization and Kubernetes (GKE) for orchestration. This enabled me to optime resource utilization through auto-scaling policies and improve system integration and performance.
 
 ## Video Demo
 [![Watch the video](https://img.youtube.com/vi/amvVTQqxZ8/0.jpg)](https://www.youtube.com/watch?v=amvVT-QqxZ8)
 
-## How to download:
+## Live Website: 
 
 ### 1. LLM Chatbot Feedback
 I incorporated Hugging Face Transformers popular text generation models including Deepseek-R1 and TinyLlama to provide the user with recommendations for improving their exercise form based off their uploaded video. I accomplished this by creating a prompt to the chatbot (in ChatML format for TinyLlama) that includes specific directions as to what it should be looking to suggest improvements on. The prompt
+consisted of specific instructions along with calculated range of motion angles computed from extracted joint position landmarks using Google's Mediapipe pose detection model. 
 
 ### Model Selection
 I first started trying to implement DeepSeek-R1 7B for chatbot feedback due to the recent publications and promising potential for performing fast inference on resource constrained devices. However, after deploying the model from Hugging Face Transformers, I realized the inference time of 6039s provided an unreasonable inference time for implementing real-time or near real-time feedback to the user making the application non user-friendly. After realizing this I needed to find a model with less parameters that can be used to provide much better inference time for giving the user a positive experience. After some research into similar chat generation models, I decided to try TinyLlama 1.1B model with significantly less parameters (7B ~ 1B) to see if I could get near real-time feedback from my chatbot model while still maintaining good responses. My initial implementation of the base TinyLlama resulted in much better performance than my DeepSeek model, however, after further examination I realized there was still room for some optimization. I implemented both base models using AutoModelForCausallM from transformers library created by Hugging Face Transformers. 
@@ -19,7 +20,7 @@ I first started trying to implement DeepSeek-R1 7B for chatbot feedback due to t
 ![Base TinyLlama 1.1B inference time] ()
 
 ### 2. Quantization
-I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inference speeds to ensure a postive user experience. I utlized llama_cpp to apply this 8 bit quantization to convert my training parameters from 32 bit floating point numbers to 8 bit integers. This drastically reduced the memory resource usage of my model which is important for enabling other users on less powerful systems to be able to execute the same program without any issues. Decreasing the overall size of the model from switching from 32 bit floating point numbers to 8 bit integers also decreases the overall complexity of the model ielding faster inference times. 
+I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inference speeds to ensure a postive user experience. I utlized llama_cpp to apply this 8 bit quantization to convert my training parameters from 32 bit floating point numbers to 8 bit integers. This drastically reduced the memory resource usage of my model which is important for enabling other users on less powerful systems to be able to execute the same program without any issues. Decreasing the overall size of the model from switching from 32 bit floating point numbers to 8 bit integers also decreases the overall complexity of the model yielding faster inference times. 
 
 ### Base TinyLlama 1.1B memory usage and inference time
 
@@ -31,7 +32,12 @@ I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inferenc
 ### 3. MediaPipe
 Google's MediaPipe is a pose detection algorithm that extracts joint positions from images. I utilized this pose detection algorithm in combination with OpenCV's VideoCapture class to extract each frame from the video and append each joint position to a joint_positions list which would then be used to help calculate force_vectors, joint_angles, and range of motion for a particular exercise. 
 
-### 4. Django Backend (Code found in /fitness_backend)
+### 4. Docker
+I created Docker containers for mediapipe (pose detection model), llama (LLM chatbot feedback), react-app (frontend), db (PostgreSQL database), and django (backend).
+
+### Kubernetes (GKE)
+
+### 6. Django Backend (Code found in /fitness_backend)
 
 ### Models
 
