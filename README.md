@@ -36,7 +36,7 @@ Google's MediaPipe is a pose detection algorithm that extracts joint positions f
 My docker-compose.yml file defines and manages a multi-container Docker application composed of five services: a React frontend, a Django backend, a Llama model service, a MediaPipe service, and a PostgreSQL database. These services are interconnected through a shared network and utilize volumes for data persistence.
 
 ### Kubernetes (GKE)
-Utilized Google Cloud Repository (GCR) to store my Docker files. My model-deployment.yml file specifies the number of replicas, container image, resource requests, and update strategy. I also utilized Google Cloud Load Balancer to expose my service externally via a pulbic IP address. 
+Utilized Google Container Repository (GCR) to store my Docker files. My model-deployment.yml file specifies the number of replicas, container image, resource requests, and update strategy. I also utilized Google Cloud Load Balancer to expose my service externally via a pulbic IP address. 
 
 ### 6. Django Backend (Code found in /fitness_backend)
 
