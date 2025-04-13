@@ -28,7 +28,7 @@ I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inferenc
 
 
 
-### Quantized TinyLlama 1.1B memory usage
+### Quantized TinyLlama 1.1B memory usage and inference time
 ![3F17062C-5F1D-49A7-9A84-4F9955664026_4_5005_c](https://github.com/user-attachments/assets/853b04be-842c-443f-8c3c-8bdbd1282e29))
 
 ### 3. MediaPipe
