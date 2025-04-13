@@ -14,7 +14,7 @@ consisted of specific instructions along with calculated range of motion angles 
 I first started trying to implement DeepSeek-R1 7B for chatbot feedback due to the recent publications and promising potential for performing fast inference on resource constrained devices. However, after deploying the model from Hugging Face Transformers, I realized the inference time of 6039s provided an unreasonable inference time for implementing real-time or near real-time feedback to the user making the application non user-friendly. After realizing this I needed to find a model with less parameters that can be used to provide much better inference time for giving the user a positive experience. After some research into similar chat generation models, I decided to try TinyLlama 1.1B model with significantly less parameters (7B ~ 1B) to see if I could get near real-time feedback from my chatbot model while still maintaining good responses. My initial implementation of the base TinyLlama resulted in much better performance than my DeepSeek model, however, after further examination I realized there was still room for some optimization. I implemented both base models using AutoModelForCausallM from transformers library created by Hugging Face Transformers. 
 
 ### Base DeepSeek-R1 7B inference time
-![80EAE1F2-6362-46A1-BD62-E44D24333A05_4_5005_c](https://github.com/user-attachments/assets/ba102de0-0b16-4b48-aea4-0921a6222bb2)
+![B685D96A-5E67-4C8D-A99B-5A349C143168_4_5005_c](https://github.com/user-attachments/assets/778fd76f-92a8-4815-b352-4a2ae69dd6ab)
 
 
 ### Base TinyLlama 1.1B inference time
@@ -23,11 +23,12 @@ I first started trying to implement DeepSeek-R1 7B for chatbot feedback due to t
 ### 2. Quantization
 I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inference speeds to ensure a postive user experience. I utlized llama_cpp to apply this 8 bit quantization to convert my training parameters from 32 bit floating point numbers to 8 bit integers. This drastically reduced the memory resource usage of my model which is important for enabling other users on less powerful systems to be able to execute the same program without any issues. Decreasing the overall size of the model from switching from 32 bit floating point numbers to 8 bit integers also decreases the overall complexity of the model yielding faster inference times. 
 
-### Base TinyLlama 1.1B memory usage and inference time
+### Base TinyLlama 1.1B memory usage
+![80EAE1F2-6362-46A1-BD62-E44D24333A05_4_5005_c](https://github.com/user-attachments/assets/ba102de0-0b16-4b48-aea4-0921a6222bb2)
 
 
 
-### Quantized TinyLlama 1.1B memory usage and inference time
+### Quantized TinyLlama 1.1B memory usage
 ![3F17062C-5F1D-49A7-9A84-4F9955664026_4_5005_c](https://github.com/user-attachments/assets/853b04be-842c-443f-8c3c-8bdbd1282e29))
 
 ### 3. MediaPipe
