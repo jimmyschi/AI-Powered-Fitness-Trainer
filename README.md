@@ -18,7 +18,8 @@ I first started trying to implement DeepSeek-R1 7B for chatbot feedback due to t
 
 
 ### Base TinyLlama 1.1B inference time
-![Base TinyLlama 1.1B inference time] ()
+![8EA06A7F-FA6B-4AE1-813D-9BF3D4903862_4_5005_c](https://github.com/user-attachments/assets/6a2bc65b-145b-4aa0-9e4e-a1b310dc9272)
+
 
 ### 2. Quantization
 I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inference speeds to ensure a postive user experience. I utlized llama_cpp to apply this 8 bit quantization to convert my training parameters from 32 bit floating point numbers to 8 bit integers. This drastically reduced the memory resource usage of my model which is important for enabling other users on less powerful systems to be able to execute the same program without any issues. Decreasing the overall size of the model from switching from 32 bit floating point numbers to 8 bit integers also decreases the overall complexity of the model yielding faster inference times. 
