@@ -47,9 +47,17 @@ This project utilizes Kubernetes on Google Kubernetes Engine (GKE) to orchestrat
 
 The Django backend defines many different models in models.py such as UserManager, User, and Exercise. The User model extends Django's AbstractBaseUser to manage user authentication and profiles, including fields like username, email, body weight, and gender. It also includes custom user management via the UserManager. The Exercise model handles exercise video uploads, analysis, and storage. It stores input videos, output videos, and output images for my matplotlib chart to buckets created on Google Cloud Storage. Additional classes can be found in fitness_backend/exercise including my base DeepseekChatbot class and my base TinyLlama class which are not currently being used in my implementation, but was involved in my original attempts in creating a real-time chatbot feedback for exercise improvement recommendations.
 
+### llama_model
+
+This Python file defines a BlokeLlamaChatbot class that utilizes the llama-cpp library to load a quantized TinyLlama LLM to generate text responses based on prompts, specifically for biomechanical analysis of exercise form. It exposes a Flask API endpoint /generate_text which, upon receiving a POST request with joint position data, timestamps, and exercise type, initializes the chatbot, processes the data to generate feedback using the Llama model, and returns the chatbot's response as a JSON.
+
+### mediapipe_model
+
+This Python file defines a MediapipeModel class that processes a video of an exercise using the process_video function that leverages MediaPipe for pose estimation to extract joint positions and timestamps. It calculates force vectors and plots repetitions to provide insights into the exercise, ultimately exposing a Flask API endpoint /process_video that accepts video details and returns the processed video path, a representative image path, joint positions, and timestamps as a JSON response.
+
 ### Views
 
-The views.py file defines API views for user authentication, registration, and exercise video processing. LoginView handles user authentication, utilizing Django's authenticate function and Token generation for secure access. NewUserView creates new user accounts, employing User.objects.create_user which automatically hashes passwords for security. FileUploadView processes uploaded exercise videos, storing them in Google Cloud Storage. It employs TokenAuthentication and IsAuthenticated to secure the endpoint, ensuring only authenticated users can upload files. AnalysisStatusView provides the status of the video analysis. The file makes extensive use of Django Rest Framework's APIView, Response, and Serializer for API development, and transaction.atomic() for database transaction management.
+The views.py file defines API views for user authentication, registration, and exercise video processing. LoginView handles user authentication, utilizing Django's authenticate function and Token generation for secure access. NewUserView creates new user accounts, employing User.objects.create_user which automatically hashes passwords for security. FileUploadView processes uploaded exercise videos, storing them in Google Cloud Storage. AnalysisStatusView provides the status of the video analysis and returns the chatbot_response when it is done processing. The file makes extensive use of Django Rest Framework's APIView, Response, and Serializer for API development, and transaction.atomic() for database transaction management.
 
 ### Serializers
 
