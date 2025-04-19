@@ -4,7 +4,7 @@ Utilized Google's MediaPipe pose detection model to extract joint positions from
 ## Video Demo
 [![Watch the video](https://img.youtube.com/vi/amvVTQqxZ8/0.jpg)](https://www.youtube.com/watch?v=amvVT-QqxZ8)
 
-## Live Website: 
+## Live Website: http://34.118.173.89/
 
 ### 1. LLM Chatbot Feedback
 I incorporated Hugging Face Transformers popular text generation models including Deepseek-R1 and TinyLlama to provide the user with recommendations for improving their exercise form based off their uploaded video. I accomplished this by creating a prompt to the chatbot (in ChatML format for TinyLlama) that includes specific directions as to what it should be looking to suggest improvements on. The prompt
