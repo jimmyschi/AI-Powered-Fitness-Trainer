@@ -7,7 +7,7 @@ Utilized Google's MediaPipe pose detection model to extract joint positions from
 ## Live Website: http://34.118.173.89/
 
 ### 1. LLM Chatbot Feedback
-I incorporated Hugging Face Transformers popular text generation models including Deepseek-R1 and TinyLlama to provide the user with recommendations for improving their exercise form based off their uploaded video. I accomplished this by creating a prompt to the chatbot (in ChatML format for TinyLlama) that includes specific directions as to what it should be looking to suggest improvements on. The prompt
+I incorporated Hugging Face Transformers popular text generation models including Deepseek-R1 and TinyLlama to provide the user with recommendations for improving their exercise form based off their uploaded video. I accomplished this by creating a prompt to the chatbot that includes specific directions as to what it should be looking to suggest improvements on. The prompt
 consisted of specific instructions along with calculated range of motion angles computed from extracted joint position landmarks using Google's Mediapipe pose detection model. 
 
 ### Model Selection
@@ -22,7 +22,7 @@ I first started trying to implement DeepSeek-R1 7B for chatbot feedback due to t
 
 
 ### 2. Quantization
-I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inference speeds to ensure a postive user experience. I utlized llama_cpp to apply this 8 bit quantization to convert my training parameters from 32 bit floating point numbers to 8 bit integers. This drastically reduced the memory resource usage of my model which is important for enabling other users on less powerful systems to be able to execute the same program without any issues. Decreasing the overall size of the model from switching from 32 bit floating point numbers to 8 bit integers also decreases the overall complexity of the model yielding faster inference times. 
+I applied 8 bit quantization to my TinyLlama 1.1B model for even faster inference speeds to ensure a postive user experience. I utlized llama_cpp to load this quantized TinyLlama model that converts the training parameters from 32 bit floating point numbers to 8 bit integers. This drastically reduced the memory resource usage of my model which is important for enabling other users on less powerful systems to be able to execute the same program without any issues. Decreasing the overall size of the model from switching from 32 bit floating point numbers to 8 bit integers also decreases the overall complexity of the model yielding faster inference times. 
 
 ### Base TinyLlama 1.1B memory usage
 ![80EAE1F2-6362-46A1-BD62-E44D24333A05_4_5005_c](https://github.com/user-attachments/assets/ba102de0-0b16-4b48-aea4-0921a6222bb2)
@@ -85,3 +85,5 @@ Kaggle Dataset: https://www.kaggle.com/datasets/hasyimabdillah/workoutfitness-vi
 DeepSeek-R1 7B: https://huggingface.co/deepseek-ai/deepseek-llm-7b-chat
 
 TinyLlama 1.1B: https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0
+
+Quantized TinyLlama 1.1B: https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v0.3-GGUF
