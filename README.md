@@ -2,7 +2,7 @@
 Utilized Google's MediaPipe pose detection model to extract joint positions from exercise videos uploaded via React Frontend. Implemented real-time chatbot feedback with quantized TinyLlama 1.1B LLM model from Hugging Face Transformers. Other features include Django user authentification, peak detection algorithm from scipy for counting reps from pose landmarks, and matplotlib plots for displaying reps with concentric/eccentric time spent for each rep for measuring time under tension. Additionally, I made this a scalable and resilient web application on GCP by utilizing Docker for containerization and Kubernetes (GKE) for orchestration. This enabled me to optime resource utilization through auto-scaling policies and improve system integration and performance.
 
 ## Video Demo
-[![Watch the video](https://img.youtube.com/vi/amvVTQqxZ8/0.jpg)](https://www.youtube.com/watch?v=amvVT-QqxZ8)
+[!(https://img.youtube.com/vi/amvVTQqxZ8/0.jpg)](https://www.youtube.com/watch?v=amvVT-QqxZ8)
 
 ## Live Website: http://34.118.173.89/
 
