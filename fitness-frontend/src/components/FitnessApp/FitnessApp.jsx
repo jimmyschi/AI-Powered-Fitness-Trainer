@@ -20,6 +20,8 @@ const FitnessApp = () => {
     const navigateProgess = useNavigate();
     const navigateLogin = useNavigate();
 
+    console.log('FitnessApp component rendered');
+
     const exercise_type = [
         "bench press", "barbell biceps curl", "chest fly machine",
         "deadlift", "decline bench press", "hammer curl",
@@ -40,7 +42,7 @@ const FitnessApp = () => {
             }
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/user", {
+                const response = await fetch(`${process.env.REACT_APP_API_URL}/api/user`, {
                     method: "GET",
                     headers: {
                         "Authorization": `Token ${token}`,
@@ -63,7 +65,13 @@ const FitnessApp = () => {
 
 
     const handleFileChange = (event) => {
+        console.log("handeFileChange called!");
         setVideoFile(event.target.files[0]);
+
+        setStreamUrl(null);
+        setProgressUrl(null);
+        setChatbotResponse("");
+        setIsPlaying(false);
     };
 
     const handleSignoffButtonClick = () => {
@@ -95,35 +103,50 @@ const FitnessApp = () => {
             if(!token) {
                 throw new Error("No token found. User might not be authenticated.");
             }
-            const response = await fetch('http://127.0.0.1:8000/api/upload/', {
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/upload/`, {
                 method: 'POST',
                 body: formData,
                 headers: {
                     "Authorization": `Token ${localStorage.getItem('token')}`
                 }
             })
+            console.log(`Response: ${response}`);
             if(!response.ok) {
                 throw new Error(`HTTP error! status ${response.status}`);
             }
             // After successful upload, potentially fetch the stream URL
             const streamData = await response.json();
+            console.log(`streamData: ${streamData}`);
             if(!streamData) {
                 throw new Error("No stream URL returned from the backend.");
             }
-            if(streamData.stream_url) {
-                setStreamUrl(streamData.stream_url);
+            // if(streamData.stream_url) {
+            //     console.log("Setting stream url");
+            //     setStreamUrl(streamData.stream_url);
+            // }
+            // if(streamData.progress_url) {
+            //     console.log("Setting progress url");
+            //     setProgressUrl(streamData.progress_url);
+            // }
+            // Access the URLs from the nested 'exercise' object
+            if(streamData.exercise && streamData.exercise.output_video) {
+                console.log("Setting streamData");
+                setStreamUrl(streamData.exercise.output_video);
             }
-            if(streamData.progress_url) {
-                setProgressUrl(streamData.progress_url);
+            if(streamData.exercise && streamData.exercise.output_image) {
+                console.log("Setting image data");
+                setProgressUrl(streamData.exercise.output_image);
             }
             setIsAnalyzing(false);
+            // setIsAnalyzing(false);
 
             //Start polling for analysis status
             const exerciseId = streamData.exercise.id;
             const pollInterval = setInterval(async () => {
                 const statusResponse = await fetch(
-                    `http://127.0.0.1:8000/api/analysis-status/${exerciseId}/`,
+                    `${process.env.REACT_APP_API_URL}/api/analysis-status/${exerciseId}`,
                     {
+                        method: 'GET',
                         headers: {
                             "Authorization": `Token ${localStorage.getItem('token')}`
                         }
