@@ -26,6 +26,7 @@ const NewUser = () => {
 
     const handleNewUser = async (event) => {
         event.preventDefault();
+        console.log("Edited handleNewUser function called!");
 
         if(!validatePassword(password)) {
             alert("Password must be at least 8 characters long and contain at least one special character.");
@@ -40,21 +41,26 @@ const NewUser = () => {
             formData.append('name', name);
             formData.append('weight', weight);
             formData.append('gender', gender);
-            const response = await fetch('http://127.0.0.1:8000/api/new/', {
+            console.log(`process.env.REACT_APP_API_URL: ${process.env.REACT_APP_API_URL}`);
+            const response = await fetch(`${process.env.REACT_APP_API_URL}/api/new/`, {
                 method: 'POST',
                 body: formData,
             })
             if(!response.ok) {
+                setUser(false);
                 throw new Error(`HTTP error! status ${response.status}`);
+            } else {
+                setUser(true);
             }
             const userResponse = await response.json();
             if(!userResponse) {
                 throw new Error("No user returned from the backend.");
             }
+            console.log(`userResponse: {userResponse}`);
             localStorage.setItem('token', userResponse.token);
             localStorage.setItem('user_id', userResponse.user_id);
             
-            setUser(userResponse.exists);
+            // setUser(userResponse.exists);
         } catch(error) {
             console.error("Error creating new user:", error);
         }
