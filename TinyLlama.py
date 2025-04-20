@@ -156,62 +156,6 @@ class TinyLlama():
             print(f"Error getting training history: {e}")
         
         return test_data, self.model, self.tokenizer
-    # def convert_to_coreml(self, model, tokenizer, coreml_model_path):
-    #     """Converts the PyTorch model to Core ML format with quantization."""
-    #     print("COREML FUNCTION CALLED")
-    #     try:
-    #         model = model.to("cpu")
-    #         model.eval()
-            
-    #         dummy_messages = [{"role": "user", "content": "test"}]
-    #         dummy_chat_template = tokenizer.apply_chat_template(dummy_messages, tokenize=False)
-    #         dummy_inputs = tokenizer(dummy_chat_template, return_tensors="pt")
-            
-    #         class WrapperModel(torch.nn.Module):
-    #             def __init__(self, model):
-    #                 super().__init__()
-    #                 self.model = model
-
-    #             def forward(self, input_ids, attention_mask):
-    #                 output = self.model(input_ids=input_ids, attention_mask=attention_mask)
-    #                 return output.logits  # Return only logits
-
-    #         wrapped_model = WrapperModel(model)
-    #         wrapped_model.eval()
-            
-    #         with torch.no_grad():
-    #             traced_model = torch.jit.trace(
-    #                 wrapped_model.forward,
-    #                 (dummy_inputs["input_ids"], dummy_inputs["attention_mask"])
-    #             )
-            
-    #         inputs = [
-    #             ct.TensorType(name="input_ids", shape=dummy_inputs["input_ids"].shape),
-    #             ct.TensorType(name="attention_mask", shape=dummy_inputs["attention_mask"].shape)
-    #         ]
-
-    #         coreml_model = ct.convert(
-    #             traced_model,
-    #             inputs=inputs,
-    #             convert_to="mlpackage",
-    #             compute_units=ct.ComputeUnit.CPU_ONLY,
-    #             minimum_deployment_target=ct.target.macOS13,
-    #             compute_precision=ct.precision.FLOAT16,
-    #             source="pytorch"
-    #         )
-
-    #         quantized_model = ct.models.neural_network.quantization_utils.quantize_weights(
-    #             coreml_model, 
-    #             nbits=8,
-    #             quantization_mode="linear"
-    #         )
-
-    #         quantized_model.save(coreml_model_path)
-    #         print(f"Model successfully converted and quantized to Core ML at: {coreml_model_path}")
-
-    #     except Exception as e:
-    #         print(f"Error converting to Core ML: {e}")
-    #         traceback.print_exc()
     
     def convert_to_coreml(self, model, tokenizer, coreml_model_path):
         """Converts the PyTorch model to Core ML format with quantization."""
