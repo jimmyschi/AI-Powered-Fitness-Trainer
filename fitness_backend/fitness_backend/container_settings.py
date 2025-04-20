@@ -1,11 +1,16 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 from storages.backends.gcloud import GoogleCloudStorage
 from google.oauth2 import service_account
 from google.cloud import storage
+from corsheaders.defaults import default_headers
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(f"BASE_DIR in container_settings.py: {BASE_DIR}")
+
+dotenv_path = Path(__file__).resolve().parent.parent / '.env'
+load_dotenv(dotenv_path=dotenv_path)
 
 # Configure Google Cloud Settings
 GS_BUCKET_NAME = 'pose_videos'
@@ -47,7 +52,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'django']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'django', '*', '10.0.1.15', '10.0.1.16', '10.0.1.20', '10.0.1.19']
+print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")
 
 LOGGING = {
     'version': 1,
@@ -115,8 +121,8 @@ DATABASES = {
         'NAME': os.environ.get('POSTGRES_DB'),
         'USER': os.environ.get('POSTGRES_USER'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': os.environ.get('DATABASE_HOST'),
-        'PORT': os.environ.get('DATABASE_PORT', '5432'),
+        'HOST': 'db-statefulset-0.db-service',
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }
 
@@ -150,6 +156,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost",
     "http://127.0.0.1:8000",
+    "http://35.203.54.31",
+    "http://34.118.173.89",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = False
